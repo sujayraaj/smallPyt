@@ -116,7 +116,6 @@ if __name__=='__main__':
  	sph.append(Sphere(1e5, Vec(50, 1e5, 81.6),    Vec(),Vec(.75,.75,.75),Refl_t.DIFF))
 	sph.append(Sphere(1e5, Vec(50,-1e5+81.6,81.6),Vec(),Vec(.75,.75,.75),Refl_t.DIFF))
 	sph.append(Sphere(16.5,Vec(27,16.5,47),       Vec(),Vec(1,1,1)*.999, Refl_t.SPEC))
-	sph.append(Sphere(16.5,Vec(73,16.5,78),       Vec(),Vec(1,1,1)*.999, Refl_t.REFR))
 	sph.append(Sphere(600, Vec(50,681.6-.27,81.6),Vec(12,12,12),  Vec(), Refl_t.DIFF))
 	w , h , samps =512  , 384 , 16
 	cam=Ray(Vec(50,52,295.6), Vec(0,-0.042612,-1).norm())

@@ -1,8 +1,0 @@
-A python port of the 100 line C++ Raytracer smallpt by Kevin Beason. (http://www.kevinbeason.com/smallpt/)
-Is just an experimental project with little interest in further exploration (because it is very slow?).
-
-Renders at 512 x 368 pixels at 64 samples per pixel by default. The values are hard-coded.
-
-This code is released under GPL v2.
-
-TODO: To upload the time and the scene once it finishes rendering 
