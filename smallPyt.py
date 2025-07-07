@@ -3,6 +3,7 @@ import math
 import random
 import os
 import sys
+from multiprocessing import Pool, cpu_count
 class Vec(object):
     __slots__ = ('x', 'y','z')
     def __init__(self, x=0.0, y=0.0,z=0.0):
@@ -107,6 +108,32 @@ def radiance(r,depth,SphList):
                 return obj.e + f.mult(radiance(Ray(x,tdir),depth,SphList)*TP)
         else:
             return radiance(reflRay,depth,SphList)*Re+radiance(Ray(x,tdir),depth,SphList)*Tr
+
+# multiprocessing helper functions
+def _init_worker(_w, _h, _samps, _cam, _cx, _cy, _sph):
+    global w, h, samps, cam, cx, cy, sph
+    w, h, samps, cam, cx, cy, sph = _w, _h, _samps, _cam, _cx, _cy, _sph
+
+def render_row(y):
+    random.seed(os.getpid() + y)
+    sqrt = math.sqrt
+    rand = random.random
+    row = []
+    for x in range(w):
+        col = Vec()
+        for sy in range(2):
+            for sx in range(2):
+                r = Vec()
+                for s in range(samps):
+                    r1 = 2 * rand()
+                    dx = sqrt(r1) - 1 if r1 < 1 else 1 - sqrt(2 - r1)
+                    r2 = 2 * rand()
+                    dy = sqrt(r2) - 1 if r2 < 1 else 1 - sqrt(2 - r2)
+                    d = cx*(((sx+0.5+dx)/2.0+x)/w-0.5) + cy*(((sy+0.5+dy)/2.0+y)/h-0.5) + cam.d
+                    r = r + radiance(Ray(cam.o+d*140,d.norm()),0,sph)*(1.0/samps)
+                col = col + Vec(clamp(r.x), clamp(r.y), clamp(r.z))*.25
+        row.append(col)
+    return y, row
 if __name__=='__main__':
     sph=[]
     sph.append(Sphere(1e5, Vec( 1e5+1,40.8,81.6), Vec(),Vec(.75,.25,.25),Refl_t.DIFF))
@@ -121,24 +148,12 @@ if __name__=='__main__':
     cam=Ray(Vec(50,52,295.6), Vec(0,-0.042612,-1).norm())
     cx=Vec(w*0.5135/h) 
     cy=(cx%cam.d).norm()*0.5135
-    c=[]
-    for iter in range(w*h):
-        c.append(Vec())
-    for y in range(h):
-        print("\rRendering row ("+str(samps*4)+" spp) "+str(y),file=sys.stderr)
-        for x in range(w):
-            i=(h-y-1)*w+x
-            for sy in range(2):
-                for sx in range(2):
-                    r=Vec()
-                    for s in range(samps):
-                        r1=2*random.random()
-                        dx = math.sqrt(r1)-1 if r1<1 else 1-math.sqrt(2-r1)                                         
-                        r2=2*random.random()
-                        dy = math.sqrt(r2)-1 if r2<1 else 1-math.sqrt(2-r2)
-                        d= cx*(((sx+0.5+dx)/2.0+x)/w-0.5)+ cy*(((sy+0.5+dy)/2.0+y)/h-0.5)+ cam.d
-                        r = r + radiance(Ray(cam.o+d*140,d.norm()),0,sph)*(1.0/samps)
-                        c[i] = c[i] + Vec(clamp(r.x),clamp(r.y),clamp(r.z))*.25;
+    c=[Vec() for _ in range(w*h)]
+    with Pool(cpu_count(), initializer=_init_worker, initargs=(w, h, samps, cam, cx, cy, sph)) as pool:
+        for y, row in pool.imap_unordered(render_row, range(h)):
+            print("\rRendering row ("+str(samps*4)+" spp) "+str(y), file=sys.stderr)
+            for x, col in enumerate(row):
+                c[(h-y-1)*w + x] = col
     with open("im.ppm", "w") as fid:
         fid.write("P3\n{} {}\n{}\n".format(w, h, 255))
         for i in range(w * h):
